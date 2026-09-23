@@ -1,0 +1,11 @@
+{
+  "name": "fittrack-microservices",
+  "version": "1.0.0",
+  "private": true,
+  "description": "FitTrack — migracija monolita u mikroservisnu arhitekturu (diplomski rad)",
+  "workspaces": ["packages/*", "services/*", "gateway"],
+  "scripts": {
+    "build:shared": "npm run build -w @fittrack/shared",
+    "dev:gateway": "npm run dev -w @fittrack/gateway"
+  }
+}
