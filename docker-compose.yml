@@ -83,6 +83,37 @@ services:
       timeout: 3s
       retries: 20
 
+  scheduling:
+    build:
+      context: .
+      dockerfile: services/scheduling/Dockerfile
+    container_name: ft-scheduling
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      SCHEDULING_DB_HOST: mysql
+      SCHEDULING_DB_PORT: "3306"
+      SCHEDULING_DB_USER: ${SCHEDULING_DB_USER:-scheduling_user}
+      SCHEDULING_DB_PASSWORD: ${SCHEDULING_DB_PASSWORD:-scheduling_pass}
+      RABBITMQ_URL: amqp://rabbitmq:5672
+    depends_on:
+      mysql:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      identity:
+        condition: service_healthy
+      coaching:
+        condition: service_healthy
+    command: ["sh", "-c", "node services/scheduling/dist/migrate.js && node services/scheduling/dist/index.js"]
+    ports:
+      - "4003:4003"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4003/health').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
   gateway:
     build:
       context: .
@@ -96,6 +127,7 @@ services:
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:5173}
       IDENTITY_URL: http://identity:4001
       COACHING_URL: http://coaching:4002
+      SCHEDULING_URL: http://scheduling:4003
       LEGACY_URL: ${LEGACY_URL:-}
     ports:
       - "4000:4000"
@@ -103,6 +135,8 @@ services:
       identity:
         condition: service_healthy
       coaching:
+        condition: service_healthy
+      scheduling:
         condition: service_healthy
 
 volumes:

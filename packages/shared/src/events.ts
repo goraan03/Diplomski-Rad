@@ -14,6 +14,14 @@ export enum EventName {
   ClientRequestApproved = "client_request.approved",
   ClientRequestRejected = "client_request.rejected",
   WorkoutRecorded = "workout.recorded",
+  ProgramCreated = "program.created",
+  ProgramUpdated = "program.updated",
+  TermCreated = "term.created",
+  TermCanceled = "term.canceled",
+  TermBooked = "term.booked",
+  TermEnrollmentCanceled = "term.enrollment_canceled",
+  TermRated = "term.rated",
+  TermSessionCompleted = "term.session_completed",
 }
 
 export interface UserRegisteredEvent { userId: number; email: string; uloga: string; ime: string; prezime: string; }

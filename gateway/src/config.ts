@@ -10,6 +10,7 @@ export const config = {
   corsOrigin: envOr("CORS_ORIGIN", "http://localhost:5173"),
   identityUrl: envOr("IDENTITY_URL", "http://localhost:4001"),
   coachingUrl: envOr("COACHING_URL", "http://localhost:4002"),
+  schedulingUrl: envOr("SCHEDULING_URL", "http://localhost:4003"),
   legacyUrl: envOr("LEGACY_URL", ""),
 };
 
@@ -37,4 +38,12 @@ export const routeTable: RouteRule[] = [
   { prefix: "/api/client/programs", target: () => config.coachingUrl, protected: true, roles: ["klijent"] },
   { prefix: "/api/client/requests", target: () => config.coachingUrl, protected: true, roles: ["klijent"] },
   { prefix: "/api/client/trainer", target: () => config.coachingUrl, protected: true, roles: ["klijent"] },
+
+  // ── Scheduling ──
+  { prefix: "/api/trainer/terms", target: () => config.schedulingUrl, protected: true, roles: ["trener"] },
+  { prefix: "/api/client/terms", target: () => config.schedulingUrl, protected: true, roles: ["klijent"] },
+  { prefix: "/api/client/schedule", target: () => config.schedulingUrl, protected: true, roles: ["klijent"] },
+  { prefix: "/api/client/history", target: () => config.schedulingUrl, protected: true, roles: ["klijent"] },
+  { prefix: "/api/client/upcoming", target: () => config.schedulingUrl, protected: true, roles: ["klijent"] },
+  { prefix: "/api/client/stats", target: () => config.schedulingUrl, protected: true, roles: ["klijent"] },
 ];

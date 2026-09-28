@@ -8,6 +8,8 @@ export const COACHING_EVENTS = {
   ClientRequestApproved: EventName.ClientRequestApproved,
   ClientRequestRejected: EventName.ClientRequestRejected,
   WorkoutRecorded: EventName.WorkoutRecorded,
+  ProgramCreated: EventName.ProgramCreated,
+  ProgramUpdated: EventName.ProgramUpdated,
 } as const;
 
 export class BrokerEventPublisher implements IEventPublisher {

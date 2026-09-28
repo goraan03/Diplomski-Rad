@@ -22,6 +22,7 @@ export class ProgramsService {
 
   async create(trainerId: number, d: { title: string; description: string | null; level: Nivo; isPublic: boolean }) {
     const id = await this.programs.create(trainerId, d);
+    await this.events.objavi(COACHING_EVENTS.ProgramCreated, { id, trainerId, title: d.title, level: d.level });
     await this.audit.zabelezi("program_kreiran", { id, title: d.title }, trainerId);
     return (await this.programs.getById(id))!;
   }
@@ -30,6 +31,15 @@ export class ProgramsService {
     const p = await this.programs.getById(id);
     if (!p || p.trainerId !== trainerId) throw NotFound("Program nije pronadjen");
     await this.programs.update(trainerId, id, d);
+    const updated = await this.programs.getById(id);
+    if (updated) {
+      await this.events.objavi(COACHING_EVENTS.ProgramUpdated, {
+        id: updated.id,
+        trainerId: updated.trainerId,
+        title: updated.title,
+        level: updated.level,
+      });
+    }
     await this.audit.zabelezi("program_izmenjen", { id }, trainerId);
     return (await this.programs.getById(id))!;
   }
