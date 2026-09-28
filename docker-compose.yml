@@ -114,6 +114,31 @@ services:
       timeout: 3s
       retries: 20
 
+  audit:
+    build:
+      context: .
+      dockerfile: services/audit/Dockerfile
+    container_name: ft-audit
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      AUDIT_DB_HOST: mysql
+      AUDIT_DB_PORT: "3306"
+      RABBITMQ_URL: amqp://rabbitmq:5672
+    depends_on:
+      mysql:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    command: ["sh", "-c", "node services/audit/dist/migrate.js && node services/audit/dist/index.js"]
+    ports:
+      - "4004:4004"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4004/health').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
   gateway:
     build:
       context: .
