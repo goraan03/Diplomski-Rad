@@ -10,9 +10,10 @@ import { AuthService } from "./services/AuthService";
 import { UserAdminService } from "./services/UserAdminService";
 import { ProfileService } from "./services/ProfileService";
 import { createApp } from "./app";
+import { ClientRequestConsumer } from "./sync/ClientRequestConsumer";
 
 async function main(): Promise<void> {
-  const broker = new Broker(config.rabbitmqUrl);
+  const broker = new Broker({ url: config.rabbitmqUrl, source: "identity" });
   // Graceful degradation: ako RabbitMQ nije dostupan, servis i dalje radi.
   try {
     await broker.connect();
@@ -29,9 +30,16 @@ async function main(): Promise<void> {
   const audit = new EventAuditLogger(broker);
   const events = new BrokerEventPublisher(broker);
 
+  try {
+    await new ClientRequestConsumer(broker, users, events).start();
+  } catch (e) {
+    // eslint-disable-next-line no-console
+    console.warn("[identity] consumer odobrenih zahteva nije pokrenut:", (e as Error).message);
+  }
+
   const auth = new AuthService(users, challenges, notifier, audit, events);
-  const admin = new UserAdminService(users, notifier, audit);
-  const profil = new ProfileService(users, audit);
+  const admin = new UserAdminService(users, notifier, audit, events);
+  const profil = new ProfileService(users, audit, events);
 
   const app = createApp({ auth, admin, profil });
   app.listen(config.port, () => {

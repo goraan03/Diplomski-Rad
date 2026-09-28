@@ -33,8 +33,7 @@ app.get("/health", (_req, res) => {
 });
 
 // ── Rutiranje ──
-// Proxy se montira NA ROOT sa pathFilter-om (ne na prefiks), da bi ciljni servis
-// dobio PUNU originalnu putanju (npr. /api/auth/login), a ne skracenu.
+// Proxy se montira na root, a interni servisi dobijaju putanju bez javnog /api prefiksa.
 // Proxy se namerno montira PRE bilo kakvog parsiranja tela — telo prolazi netaknuto.
 for (const rule of routeTable) {
   const handlers: RequestHandler[] = [];
@@ -52,6 +51,7 @@ for (const rule of routeTable) {
       target: rule.target(),
       changeOrigin: true,
       xfwd: true,
+      pathRewrite: (path) => path.replace(/^\/api(?=\/|$)/, ""),
       pathFilter: (path: string) => path.startsWith(rule.prefix),
     }) as unknown as RequestHandler
   );

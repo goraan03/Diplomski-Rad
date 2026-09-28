@@ -29,6 +29,60 @@ services:
       timeout: 5s
       retries: 10
 
+  identity:
+    build:
+      context: .
+      dockerfile: services/identity/Dockerfile
+    container_name: ft-identity
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      IDENTITY_DB_HOST: mysql
+      IDENTITY_DB_PORT: "3306"
+      RABBITMQ_URL: amqp://rabbitmq:5672
+    depends_on:
+      mysql:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    command: ["sh", "-c", "node services/identity/dist/migrate.js && node services/identity/dist/index.js"]
+    ports:
+      - "4001:4001"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4001/health').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  coaching:
+    build:
+      context: .
+      dockerfile: services/coaching/Dockerfile
+    container_name: ft-coaching
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      COACHING_DB_HOST: mysql
+      COACHING_DB_PORT: "3306"
+      COACHING_DB_USER: ${COACHING_DB_USER:-coaching_user}
+      COACHING_DB_PASSWORD: ${COACHING_DB_PASSWORD:-coaching_pass}
+      RABBITMQ_URL: amqp://rabbitmq:5672
+    depends_on:
+      mysql:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      identity:
+        condition: service_started
+    command: ["sh", "-c", "node services/coaching/dist/migrate.js && node services/coaching/dist/index.js"]
+    ports:
+      - "4002:4002"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4002/health').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
   gateway:
     build:
       context: .
@@ -40,11 +94,16 @@ services:
       PORT: ${GATEWAY_PORT:-4000}
       JWT_SECRET: ${JWT_SECRET}
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:5173}
-      IDENTITY_URL: ${IDENTITY_URL:-http://identity:4001}
+      IDENTITY_URL: http://identity:4001
+      COACHING_URL: http://coaching:4002
       LEGACY_URL: ${LEGACY_URL:-}
     ports:
       - "4000:4000"
-    # depends_on ce se dopuniti kad dodamo identity servis (Korak 2)
+    depends_on:
+      identity:
+        condition: service_healthy
+      coaching:
+        condition: service_healthy
 
 volumes:
   mysql-data:

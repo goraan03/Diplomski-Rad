@@ -9,6 +9,7 @@ export const config = {
   jwtSecret: requireEnv("JWT_SECRET"),
   corsOrigin: envOr("CORS_ORIGIN", "http://localhost:5173"),
   identityUrl: envOr("IDENTITY_URL", "http://localhost:4001"),
+  coachingUrl: envOr("COACHING_URL", "http://localhost:4002"),
   legacyUrl: envOr("LEGACY_URL", ""),
 };
 
@@ -28,7 +29,12 @@ export const routeTable: RouteRule[] = [
   { prefix: "/api/admin/users", target: () => config.identityUrl, protected: true, roles: ["admin"] },
   { prefix: "/api/admin/trainers", target: () => config.identityUrl, protected: true, roles: ["admin"] },
 
-  // ── Coaching / Scheduling / Billing (dodaju se u narednim koracima) ──
-  // { prefix: "/api/trainer", target: () => config.coachingUrl, protected: true, roles: ["trener"] },
-  // { prefix: "/api/client",  target: () => config.schedulingUrl, protected: true, roles: ["klijent"] },
+  // ── Coaching ──
+  { prefix: "/api/trainer/exercises", target: () => config.coachingUrl, protected: true, roles: ["trener"] },
+  { prefix: "/api/trainer/programs", target: () => config.coachingUrl, protected: true, roles: ["trener"] },
+  { prefix: "/api/trainer/requests", target: () => config.coachingUrl, protected: true, roles: ["trener"] },
+  { prefix: "/api/trainer/workouts", target: () => config.coachingUrl, protected: true, roles: ["trener"] },
+  { prefix: "/api/client/programs", target: () => config.coachingUrl, protected: true, roles: ["klijent"] },
+  { prefix: "/api/client/requests", target: () => config.coachingUrl, protected: true, roles: ["klijent"] },
+  { prefix: "/api/client/trainer", target: () => config.coachingUrl, protected: true, roles: ["klijent"] },
 ];

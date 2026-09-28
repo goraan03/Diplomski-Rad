@@ -11,6 +11,7 @@ import { jeIsteklo, zaMinutaUnapred } from "../utils/dates";
 import { maskirajEmail } from "../utils/maskEmail";
 import { BadRequest, Conflict, Forbidden, NotFound, Unauthorized } from "../utils/errors";
 import { config } from "../config";
+import type { SignOptions } from "jsonwebtoken";
 
 export interface RegistracijaKlijenta {
   korisnickoIme: string;
@@ -50,6 +51,16 @@ export class AuthService {
       pol: d.pol ?? null,
     });
     await this.notifier.posaljiDobrodoslicu(korisnik.korisnickoIme, korisnik.ime);
+    await this.events.objavi(EventName.UserRegistered, {
+      userId: korisnik.id,
+      korisnickoIme: korisnik.korisnickoIme,
+      email: korisnik.korisnickoIme,
+      uloga: korisnik.uloga,
+      ime: korisnik.ime,
+      prezime: korisnik.prezime,
+      assignedTrenerId: korisnik.assignedTrenerId,
+      blokiran: korisnik.blokiran,
+    });
     await this.audit.zabelezi("registracija_klijenta", { korisnickoIme: korisnik.korisnickoIme }, korisnik.id);
     return uJavniProfil(korisnik);
   }
@@ -80,7 +91,7 @@ export class AuthService {
       korisnickoIme: korisnik.korisnickoIme,
       uloga: korisnik.uloga,
       blokiran: korisnik.blokiran,
-    });
+    }, config.jwt.secret, config.jwt.expiresIn as SignOptions["expiresIn"]);
 
     // Trial trenera se ne racuna ovde: samo objavimo dogadjaj (obradjuje Coaching/Billing).
     if (korisnik.uloga === "trener") {

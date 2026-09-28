@@ -9,6 +9,11 @@ export enum EventName {
   EmailOtpRequested = "email.otp_requested",
   EmailPasswordResetRequested = "email.password_reset_requested",
   AuditLog = "audit.log",
+  ProgramAssigned = "program.assigned",
+  ClientRequestCreated = "client_request.created",
+  ClientRequestApproved = "client_request.approved",
+  ClientRequestRejected = "client_request.rejected",
+  WorkoutRecorded = "workout.recorded",
 }
 
 export interface UserRegisteredEvent { userId: number; email: string; uloga: string; ime: string; prezime: string; }
