@@ -20,6 +20,9 @@ services:
     image: rabbitmq:3.13-management
     container_name: ft-rabbitmq
     restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-fittrack}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-fittrack_dev_pass}
     ports:
       - "5672:5672"
       - "15672:15672"
@@ -39,7 +42,7 @@ services:
     environment:
       IDENTITY_DB_HOST: mysql
       IDENTITY_DB_PORT: "3306"
-      RABBITMQ_URL: amqp://rabbitmq:5672
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-fittrack}:${RABBITMQ_PASSWORD:-fittrack_dev_pass}@rabbitmq:5672
     depends_on:
       mysql:
         condition: service_healthy
@@ -66,7 +69,7 @@ services:
       COACHING_DB_PORT: "3306"
       COACHING_DB_USER: ${COACHING_DB_USER:-coaching_user}
       COACHING_DB_PASSWORD: ${COACHING_DB_PASSWORD:-coaching_pass}
-      RABBITMQ_URL: amqp://rabbitmq:5672
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-fittrack}:${RABBITMQ_PASSWORD:-fittrack_dev_pass}@rabbitmq:5672
     depends_on:
       mysql:
         condition: service_healthy
@@ -95,7 +98,7 @@ services:
       SCHEDULING_DB_PORT: "3306"
       SCHEDULING_DB_USER: ${SCHEDULING_DB_USER:-scheduling_user}
       SCHEDULING_DB_PASSWORD: ${SCHEDULING_DB_PASSWORD:-scheduling_pass}
-      RABBITMQ_URL: amqp://rabbitmq:5672
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-fittrack}:${RABBITMQ_PASSWORD:-fittrack_dev_pass}@rabbitmq:5672
     depends_on:
       mysql:
         condition: service_healthy
@@ -124,7 +127,7 @@ services:
     environment:
       AUDIT_DB_HOST: mysql
       AUDIT_DB_PORT: "3306"
-      RABBITMQ_URL: amqp://rabbitmq:5672
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-fittrack}:${RABBITMQ_PASSWORD:-fittrack_dev_pass}@rabbitmq:5672
     depends_on:
       mysql:
         condition: service_healthy
@@ -135,6 +138,26 @@ services:
       - "4004:4004"
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4004/health').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  notification:
+    build:
+      context: .
+      dockerfile: services/notification/Dockerfile
+    container_name: ft-notification
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-fittrack}:${RABBITMQ_PASSWORD:-fittrack_dev_pass}@rabbitmq:5672
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:4005:4005"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4005/health').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
       interval: 5s
       timeout: 3s
       retries: 20
@@ -153,15 +176,18 @@ services:
       IDENTITY_URL: http://identity:4001
       COACHING_URL: http://coaching:4002
       SCHEDULING_URL: http://scheduling:4003
+      AUDIT_URL: http://audit:4004
       LEGACY_URL: ${LEGACY_URL:-}
     ports:
-      - "4000:4000"
+      - "${GATEWAY_PORT:-4000}:${GATEWAY_PORT:-4000}"
     depends_on:
       identity:
         condition: service_healthy
       coaching:
         condition: service_healthy
       scheduling:
+        condition: service_healthy
+      audit:
         condition: service_healthy
 
 volumes:

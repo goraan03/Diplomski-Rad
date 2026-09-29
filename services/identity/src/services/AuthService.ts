@@ -50,7 +50,6 @@ export class AuthService {
       datumRodjenja: d.datumRodjenja ?? null,
       pol: d.pol ?? null,
     });
-    await this.notifier.posaljiDobrodoslicu(korisnik.korisnickoIme, korisnik.ime);
     await this.events.objavi(EventName.UserRegistered, {
       userId: korisnik.id,
       korisnickoIme: korisnik.korisnickoIme,

@@ -1,0 +1,25 @@
+{
+  "name": "@fittrack/notification",
+  "version": "1.0.0",
+  "private": true,
+  "type": "commonjs",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@fittrack/shared": "*",
+    "dotenv": "^16.4.5",
+    "express": "^5.0.1",
+    "nodemailer": "^6.9.15"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.7.4",
+    "@types/nodemailer": "^6.4.16",
+    "tsx": "^4.19.1",
+    "typescript": "^5.6.2"
+  }
+}

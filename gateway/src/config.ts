@@ -11,6 +11,7 @@ export const config = {
   identityUrl: envOr("IDENTITY_URL", "http://localhost:4001"),
   coachingUrl: envOr("COACHING_URL", "http://localhost:4002"),
   schedulingUrl: envOr("SCHEDULING_URL", "http://localhost:4003"),
+  auditUrl: envOr("AUDIT_URL", "http://localhost:4004"),
   legacyUrl: envOr("LEGACY_URL", ""),
 };
 
@@ -29,6 +30,8 @@ export const routeTable: RouteRule[] = [
   { prefix: "/api/trainer/me/profile", target: () => config.identityUrl, protected: true, roles: ["trener"] },
   { prefix: "/api/admin/users", target: () => config.identityUrl, protected: true, roles: ["admin"] },
   { prefix: "/api/admin/trainers", target: () => config.identityUrl, protected: true, roles: ["admin"] },
+  { prefix: "/api/admin/clients", target: () => config.identityUrl, protected: true, roles: ["admin"] },
+  { prefix: "/api/audit", target: () => config.auditUrl, protected: true, roles: ["admin"] },
 
   // ── Coaching ──
   { prefix: "/api/trainer/exercises", target: () => config.coachingUrl, protected: true, roles: ["trener"] },

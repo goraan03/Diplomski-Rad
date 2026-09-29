@@ -2,6 +2,7 @@ import amqp, { Channel, ChannelModel } from "amqplib";
 import { EXCHANGE_DEFAULT, EventName } from "./events";
 
 type Handler = (payload: unknown, routingKey: string) => Promise<void> | void;
+interface ConsumerRegistration { queue: string; routingKeys: EventName[]; handler: Handler; }
 
 export interface BrokerOptions { url: string; exchange?: string; source: string; }
 
@@ -10,6 +11,8 @@ export class Broker {
   private channel: Channel | null = null;
   private connecting: Promise<void> | null = null;
   private readonly exchange: string;
+  private readonly consumers = new Map<string, ConsumerRegistration>();
+  private readonly activeConsumers = new Map<string, Channel>();
 
   constructor(private opts: BrokerOptions) { this.exchange = opts.exchange ?? EXCHANGE_DEFAULT; }
 
@@ -18,19 +21,27 @@ export class Broker {
     if (this.connecting) return this.connecting;
     this.connecting = (async () => {
       try {
-        this.conn = await amqp.connect(this.opts.url);
-        this.channel = await this.conn.createChannel();
-        await this.channel.assertExchange(this.exchange, "topic", { durable: true });
-        this.conn.on("close", () => {
+        const conn = await amqp.connect(this.opts.url);
+        const channel = await conn.createChannel();
+        this.conn = conn;
+        this.channel = channel;
+        await channel.assertExchange(this.exchange, "topic", { durable: true });
+        conn.on("close", () => {
           console.warn(`[broker:${this.opts.source}] konekcija zatvorena, reconnect za 3s`);
-          this.channel = null; this.conn = null;
+          if (this.conn === conn) {
+            this.channel = null;
+            this.conn = null;
+            this.activeConsumers.clear();
+          }
           setTimeout(() => void this.connect().catch(() => undefined), 3000);
         });
-        this.conn.on("error", (e: Error) => console.error(`[broker:${this.opts.source}] error:`, e.message));
+        conn.on("error", (e: Error) => console.error(`[broker:${this.opts.source}] error:`, e.message));
+        await this.restoreConsumers();
         console.log(`[broker:${this.opts.source}] povezan na exchange "${this.exchange}"`);
       } catch (e) {
         console.warn(`[broker:${this.opts.source}] konekcija neuspesna: ${(e as Error).message}. Reconnect za 3s.`);
         this.channel = null; this.conn = null;
+        this.activeConsumers.clear();
         setTimeout(() => void this.connect().catch(() => undefined), 3000);
       } finally { this.connecting = null; }
     })();
@@ -45,23 +56,36 @@ export class Broker {
   }
 
   async consume(queue: string, routingKeys: EventName[], handler: Handler): Promise<void> {
+    const registration = { queue, routingKeys, handler };
+    this.consumers.set(queue, registration);
     await this.connect();
-    if (!this.channel) throw new Error("Broker nije povezan");
-    await this.channel.assertQueue(queue, { durable: true });
-    for (const rk of routingKeys) await this.channel.bindQueue(queue, this.exchange, rk);
-    await this.channel.prefetch(10);
-    await this.channel.consume(queue, async (msg) => {
+    await this.registerConsumer(registration);
+  }
+
+  private async restoreConsumers(): Promise<void> {
+    for (const consumer of this.consumers.values()) await this.registerConsumer(consumer);
+  }
+
+  private async registerConsumer(consumer: ConsumerRegistration): Promise<void> {
+    const channel = this.channel;
+    if (!channel) throw new Error("Broker nije povezan");
+    if (this.activeConsumers.get(consumer.queue) === channel) return;
+    await channel.assertQueue(consumer.queue, { durable: true });
+    for (const rk of consumer.routingKeys) await channel.bindQueue(consumer.queue, this.exchange, rk);
+    await channel.prefetch(10);
+    await channel.consume(consumer.queue, async (msg) => {
       if (!msg) return;
       try {
         const payload = JSON.parse(msg.content.toString());
-        await handler(payload, msg.fields.routingKey);
-        this.channel!.ack(msg);
+        await consumer.handler(payload, msg.fields.routingKey);
+        channel.ack(msg);
       } catch (e) {
         console.error(`[broker:${this.opts.source}] handler greska:`, (e as Error).message);
-        this.channel!.nack(msg, false, false);
+        try { channel.nack(msg, false, true); } catch { /* connection closed */ }
       }
     });
-    console.log(`[broker:${this.opts.source}] slusa queue "${queue}" (${routingKeys.join(", ")})`);
+    this.activeConsumers.set(consumer.queue, channel);
+    console.log(`[broker:${this.opts.source}] slusa queue "${consumer.queue}" (${consumer.routingKeys.join(", ")})`);
   }
 
   async close(): Promise<void> {
